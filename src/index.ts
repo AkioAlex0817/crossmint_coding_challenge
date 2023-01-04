@@ -56,7 +56,7 @@ export class Phase1Space implements Space {
   }
 
   /**
-   * Draw the symbol
+   * Draw the symbol with Goal url
    * @param url
    */
   async draw(url: string): Promise<boolean> {
@@ -80,43 +80,75 @@ export class Phase1Space implements Space {
           for (let row = 0; row < this.planets.rows; row++) {
             for (let column = 0; column < this.planets.columns; column++) {
               const base: any = this.planets?.at(row, column);
-              if (!this.compare(base, String(this.goal.at(row, column)))) {
+              const goal_planet = String(this.goal.at(row, column));
+              if (!this.compare(base, goal_planet)) {
                 const target: Location = { url: '', row, column };
-                if (base && base.type) {
-                  switch (base.type) {
-                    case POLYANET:
+                if (goal_planet != '') {
+                  switch (goal_planet) {
+                    case 'POLYANET':
                       target.url = 'polyanets';
                       break;
-                    case SOLOONS:
+                    case 'PURPLE_SOLOON':
                       target.url = 'soloons';
-                      target.color = base.color;
+                      target.color = 'purple';
                       break;
-                    case COMETH:
+                    case 'BLUE_SOLOON':
+                      target.url = 'soloons';
+                      target.color = 'blue';
+                      break;
+                    case 'WHITE_SOLOON':
+                      target.url = 'soloons';
+                      target.color = 'white';
+                      break;
+                    case 'RED_SOLOON':
+                      target.url = 'soloons';
+                      target.color = 'red';
+                      break;
+                    case 'LEFT_COMETH':
                       target.url = 'comeths';
-                      target.direction = base.direction;
+                      target.direction = 'left';
+                      break;
+                    case 'RIGHT_COMETH':
+                      target.url = 'comeths';
+                      target.direction = 'right';
+                      break;
+                    case 'DOWN_COMETH':
+                      target.url = 'comeths';
+                      target.direction = 'down';
+                      break;
+                    case 'UP_COMETH':
+                      target.url = 'comeths';
+                      target.direction = 'up';
                       break;
                   }
+                  if (target.url != '') {
+                    locations.push(target);
+                  }
                 }
-                locations.push(target);
               }
             }
           }
           if (locations.length > 0) {
-            await Promise.all(
-              locations.map(async (location: Location) => {
-                const data: any = {
-                  row: location.row,
-                  column: location.column,
-                };
-                if (location.color) {
-                  data.color = location.color;
-                }
-                if (location.direction) {
-                  data.direction = location.direction;
-                }
-                await this.sendRequest('POST', location.url, data);
-              }),
-            );
+            const chunkSize = 10;
+            for (let index = 0; index < locations.length; index += chunkSize) {
+              const chunkLocations = locations.slice(index, index + chunkSize);
+              await Promise.all(
+                chunkLocations.map(async (location: Location) => {
+                  const data: any = {
+                    row: location.row,
+                    column: location.column,
+                  };
+                  if (location.color) {
+                    data.color = location.color;
+                  }
+                  if (location.direction) {
+                    data.direction = location.direction;
+                  }
+                  await this.sendRequest('POST', location.url, data);
+                }),
+              );
+              await sleep(3000); // sleep 3s
+            }
           }
           return true;
         }
