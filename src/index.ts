@@ -2,9 +2,16 @@ import { Matrix } from 'ts-matrix';
 import { fetcher } from './axios';
 import { Method } from 'axios';
 
+export const POLYANET = 0;
+export const SOLOONS = 1;
+export const COMETH = 2;
+
 type Location = {
+  url: string;
   row: number;
   column: number;
+  color?: string;
+  direction?: string;
 };
 
 export const sleep = (ms: number) => {
@@ -72,23 +79,42 @@ export class Phase1Space implements Space {
           const locations: Location[] = [];
           for (let row = 0; row < this.planets.rows; row++) {
             for (let column = 0; column < this.planets.columns; column++) {
-              if (
-                !this.compare(
-                  this.planets?.at(row, column),
-                  String(this.goal.at(row, column)),
-                )
-              ) {
-                locations.push({ row, column });
+              const base: any = this.planets?.at(row, column);
+              if (!this.compare(base, String(this.goal.at(row, column)))) {
+                const target: Location = { url: '', row, column };
+                if (base && base.type) {
+                  switch (base.type) {
+                    case POLYANET:
+                      target.url = 'polyanets';
+                      break;
+                    case SOLOONS:
+                      target.url = 'soloons';
+                      target.color = base.color;
+                      break;
+                    case COMETH:
+                      target.url = 'comeths';
+                      target.direction = base.direction;
+                      break;
+                  }
+                }
+                locations.push(target);
               }
             }
           }
           if (locations.length > 0) {
             await Promise.all(
               locations.map(async (location: Location) => {
-                await this.sendRequest('POST', 'polyanets', {
+                const data: any = {
                   row: location.row,
                   column: location.column,
-                });
+                };
+                if (location.color) {
+                  data.color = location.color;
+                }
+                if (location.direction) {
+                  data.direction = location.direction;
+                }
+                await this.sendRequest('POST', location.url, data);
               }),
             );
           }
@@ -111,14 +137,17 @@ export class Phase1Space implements Space {
     return [rows, cols];
   }
 
-  private compare(basic: any, target: string) {
+  private compare(basic: any, target: string): boolean {
     if (!basic) {
       return 'SPACE' == target;
     }
     switch (basic.type) {
-      case 0:
+      case POLYANET: // POLYANET
         return 'POLYANET' == target;
-      //todo case for next phase
+      case SOLOONS: // SOLoons
+        return `${basic.color.toUpperCase()}_SOLOON` == target;
+      case COMETH: // comETH
+        return `${basic.direction.toUpperCase()}_COMETH` == target;
     }
     return false;
   }
