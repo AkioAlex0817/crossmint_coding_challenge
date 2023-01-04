@@ -20,21 +20,22 @@ type Location = {
   direction?: string;
 };
 
-export interface Space {
-  planets: Matrix | undefined;
-  goal: Matrix | undefined;
+export interface Megaverse {
+  my_megaverse: Matrix | undefined;
+  goal_megaverse: Matrix | undefined;
   init(url: string): Promise<boolean>;
   draw(url: string): Promise<boolean>;
 }
 
-export class PhaseSpace implements Space {
-  planets: Matrix | undefined;
-  goal: Matrix | undefined;
+export class MyMegaverse implements Megaverse {
+  my_megaverse: Matrix | undefined;
+  goal_megaverse: Matrix | undefined;
   cmsScheduler = new RequestScheduler({
     intervalTime: REQUESTS_INTERVAL_TIME,
     requestsPerInterval: REQUESTS_PER_INTERVAL,
     debugMode: DEBUG_MODE,
   });
+
   /**
    * Initialize my current status
    * @param url
@@ -42,15 +43,12 @@ export class PhaseSpace implements Space {
   async init(url: string): Promise<boolean> {
     try {
       if (url == '') return false;
-      const response = await fetcher({
-        method: 'GET',
-        url,
-      });
+      const response = await this.sendRequest('GET', url);
       if (response.success) {
         const data = response.data;
         if (data.map && data.map.content) {
           const [rows, cols] = this.getRowsAndCols(data.map.content);
-          this.planets = new Matrix(rows, cols, data.map.content);
+          this.my_megaverse = new Matrix(rows, cols, data.map.content);
           return true;
         }
       }
@@ -69,30 +67,27 @@ export class PhaseSpace implements Space {
    */
   async draw(url: string): Promise<boolean> {
     try {
-      if (url == '' || this.planets == undefined) return false;
-      const response = await fetcher({
-        method: 'GET',
-        url,
-      });
+      if (url == '' || this.my_megaverse == undefined) return false;
+      const response = await this.sendRequest('GET', url);
       if (response.success) {
         const data = response.data;
         if (data && data.goal) {
           const [rows, cols] = this.getRowsAndCols(data.goal);
-          this.goal = new Matrix(rows, cols, data.goal);
+          this.goal_megaverse = new Matrix(rows, cols, data.goal);
           if (
-            this.planets.rows != this.goal.rows ||
-            this.planets.columns != this.goal.columns
+            this.my_megaverse.rows != this.goal_megaverse.rows ||
+            this.my_megaverse.columns != this.goal_megaverse.columns
           )
             return false;
           const locations: Location[] = [];
-          for (let row = 0; row < this.planets.rows; row++) {
-            for (let column = 0; column < this.planets.columns; column++) {
-              const base: any = this.planets?.at(row, column);
-              const goal_planet = String(this.goal.at(row, column));
-              if (!this.compare(base, goal_planet)) {
+          for (let row = 0; row < this.my_megaverse.rows; row++) {
+            for (let column = 0; column < this.my_megaverse.columns; column++) {
+              const base: any = this.my_megaverse?.at(row, column);
+              const goal = String(this.goal_megaverse.at(row, column));
+              if (!this.compare(base, goal)) {
                 const target: Location = { url: '', row, column };
-                if (goal_planet != '') {
-                  switch (goal_planet) {
+                if (goal != '') {
+                  switch (goal) {
                     case 'POLYANET':
                       target.url = 'polyanets';
                       break;
