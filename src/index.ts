@@ -22,6 +22,10 @@ export class Phase1Space implements Space {
   planets: Matrix | undefined;
   goal: Matrix | undefined;
 
+  /**
+   * Initialize my current status
+   * @param url
+   */
   async init(url: string): Promise<boolean> {
     try {
       if (url == '') return false;
@@ -44,6 +48,10 @@ export class Phase1Space implements Space {
     }
   }
 
+  /**
+   * Draw the symbol
+   * @param url
+   */
   async draw(url: string): Promise<boolean> {
     try {
       if (url == '' || !this.planets) return false;
@@ -122,7 +130,7 @@ export class Phase1Space implements Space {
       retry++;
       const response = await fetcher({ method, url, data });
       if (response.success) {
-        break;
+        return;
       } else {
         await sleep(2000);
       }
