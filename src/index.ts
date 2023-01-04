@@ -25,7 +25,7 @@ export interface Space {
   draw(url: string): Promise<boolean>;
 }
 
-export class Phase1Space implements Space {
+export class PhaseSpace implements Space {
   planets: Matrix | undefined;
   goal: Matrix | undefined;
 
@@ -129,7 +129,7 @@ export class Phase1Space implements Space {
             }
           }
           if (locations.length > 0) {
-            const chunkSize = 10;
+            const chunkSize = 10; // chunk list to avoid 429 issue
             for (let index = 0; index < locations.length; index += chunkSize) {
               console.log(`From: ${index} To: ${index + chunkSize}`);
               const chunkLocations = locations.slice(index, index + chunkSize);
