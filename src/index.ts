@@ -131,6 +131,7 @@ export class Phase1Space implements Space {
           if (locations.length > 0) {
             const chunkSize = 10;
             for (let index = 0; index < locations.length; index += chunkSize) {
+              console.log(`From: ${index} To: ${index + chunkSize}`);
               const chunkLocations = locations.slice(index, index + chunkSize);
               await Promise.all(
                 chunkLocations.map(async (location: Location) => {
