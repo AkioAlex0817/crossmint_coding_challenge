@@ -45,6 +45,7 @@ export const fetcher = async (
       data: res.data,
     };
   } catch (err: any) {
+    console.log(err);
     return {
       success: false,
       message: err.response.data?.message,

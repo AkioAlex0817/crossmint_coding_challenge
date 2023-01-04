@@ -10,7 +10,8 @@
   "rules": {
     "no-console": 0,
     "prettier/prettier": 2,
-    "@typescript-eslint/no-explicit-any": 0
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/ban-types": 0
   },
   "env": {
     "browser": true,

@@ -1,6 +1,12 @@
 import { Matrix } from 'ts-matrix';
 import { fetcher } from './axios';
 import { Method } from 'axios';
+import { RequestScheduler } from './request';
+
+// allow 10 requests per 5 seconds
+export const REQUESTS_PER_INTERVAL = 10;
+export const REQUESTS_INTERVAL_TIME = 5000;
+export const DEBUG_MODE = false;
 
 export const POLYANET = 0;
 export const SOLOONS = 1;
@@ -14,10 +20,6 @@ type Location = {
   direction?: string;
 };
 
-export const sleep = (ms: number) => {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 export interface Space {
   planets: Matrix | undefined;
   goal: Matrix | undefined;
@@ -28,7 +30,11 @@ export interface Space {
 export class PhaseSpace implements Space {
   planets: Matrix | undefined;
   goal: Matrix | undefined;
-
+  cmsScheduler = new RequestScheduler({
+    intervalTime: REQUESTS_INTERVAL_TIME,
+    requestsPerInterval: REQUESTS_PER_INTERVAL,
+    debugMode: DEBUG_MODE,
+  });
   /**
    * Initialize my current status
    * @param url
@@ -50,7 +56,9 @@ export class PhaseSpace implements Space {
       }
       return false;
     } catch (e: any) {
-      console.error(e);
+      if (DEBUG_MODE) {
+        console.error(e);
+      }
       return false;
     }
   }
@@ -61,7 +69,7 @@ export class PhaseSpace implements Space {
    */
   async draw(url: string): Promise<boolean> {
     try {
-      if (url == '' || !this.planets) return false;
+      if (url == '' || this.planets == undefined) return false;
       const response = await fetcher({
         method: 'GET',
         url,
@@ -129,34 +137,33 @@ export class PhaseSpace implements Space {
             }
           }
           if (locations.length > 0) {
-            const chunkSize = 10; // chunk list to avoid 429 issue
-            for (let index = 0; index < locations.length; index += chunkSize) {
-              console.log(`From: ${index} To: ${index + chunkSize}`);
-              const chunkLocations = locations.slice(index, index + chunkSize);
-              await Promise.all(
-                chunkLocations.map(async (location: Location) => {
-                  const data: any = {
-                    row: location.row,
-                    column: location.column,
-                  };
-                  if (location.color) {
-                    data.color = location.color;
-                  }
-                  if (location.direction) {
-                    data.direction = location.direction;
-                  }
-                  await this.sendRequest('POST', location.url, data);
-                }),
-              );
-              await sleep(3000); // sleep 3s
-            }
+            await (async () => {
+              for (let i = 0; i < locations.length; i++) {
+                const location = locations[i];
+                const data: any = {
+                  row: location.row,
+                  column: location.column,
+                };
+                if (location.color) {
+                  data.color = location.color;
+                }
+                if (location.direction) {
+                  data.direction = location.direction;
+                }
+                await this.cmsScheduler.schedule(
+                  this.sendRequest('POST', location.url, data),
+                );
+              }
+            })();
           }
           return true;
         }
       }
       return false;
     } catch (e: any) {
-      console.error(e);
+      if (DEBUG_MODE) {
+        console.error(e);
+      }
       return false;
     }
   }
@@ -186,17 +193,6 @@ export class PhaseSpace implements Space {
   }
 
   private async sendRequest(method: Method, url: string, data?: any) {
-    const retryCount = 3;
-    let retry = 0;
-    while (retry < retryCount) {
-      retry++;
-      const response = await fetcher({ method, url, data });
-      if (response.success) {
-        return;
-      } else {
-        await sleep(2000);
-      }
-    }
-    throw new Error('Failed to API call!');
+    return await fetcher({ method, url, data });
   }
 }
